@@ -34,5 +34,5 @@ public class PlayerCamera : MonoBehaviour
             //Return to centre when not zooming
             transform.position = Vector3.Lerp(transform.position, new Vector3(0f, 0f, -10f), Time.deltaTime * zoomSpeed);
         }
-    }
+    } 
 }
