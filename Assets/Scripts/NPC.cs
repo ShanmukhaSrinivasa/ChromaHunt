@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class NPC : MonoBehaviour
@@ -10,6 +11,12 @@ public class NPC : MonoBehaviour
     private Vector2 moveDir;
     private float nextDirChange;
 
+    private Vector2 targetWanderPoint;
+    private bool isWaiting = false;
+    public float moveSpeed = 2.0f;
+
+    private bool isDead = false;
+
 
     private void Awake()
     {
@@ -18,19 +25,22 @@ public class NPC : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (Time.time > nextDirChange)
+        if (!isWaiting)
         {
-            moveDir = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized;
-            nextDirChange = Time.time + Random.Range(2f, 5f);
+            MoveTowardTarget();
         }
-
-        //Move slightly, but only ig they are ont screen
-        transform.Translate(moveDir * 1.5f * Time.deltaTime);
     }
-
+  
     private void Start()
     {
         sr.color = hiddenColor;
+
+        //Pick first target immeadiately so they start moving
+        CrowdManager manager = Object.FindAnyObjectByType<CrowdManager>();
+        targetWanderPoint = new Vector2(
+            Random.Range(-manager.worldWidth, manager.worldWidth),
+            Random.Range(-manager.worldHeight, manager.worldHeight)
+        );
     }
 
     private void Update()
@@ -65,25 +75,80 @@ public class NPC : MonoBehaviour
 
     public void OnShot(Color targetColor)
     {
+        if(isDead) return; //Prevent multiple hits
+
         GameTimer timer = Object.FindFirstObjectByType<GameTimer>();
+        CrowdManager manager = Object.FindFirstObjectByType<CrowdManager>();
+        PlayerCamera cam = Object.FindFirstObjectByType<PlayerCamera>();
 
         //Check if my secret color matches the target
-        if (ColorUtility.ToHtmlStringRGB(myTrueColor) == ColorUtility.ToHtmlStringRGB(targetColor))
+        if (UnityEngine.ColorUtility.ToHtmlStringRGB(myTrueColor) == UnityEngine.ColorUtility.ToHtmlStringRGB(targetColor))
         {
-            Debug.Log("Target NEutralized!");
+            isDead = true;
+
+            Debug.Log("Target Neutralized!");
+
+            cam.Shake(0.1f, 0.2f); //Small satisfying shake for a hit
+
+            StartCoroutine(DeResEffect());
 
             timer.AddTime(10f); //Reward 10 Seconds
 
-            //Tell the CrowdManager to pick a new target Color
-            Object.FindFirstObjectByType<CrowdManager>().PickNewTarget();
-
-            Destroy(gameObject);
+            manager.OnTargetHit();
         }
         else
         {
             Debug.Log("Civilian Hit ~ Penalty!");
 
+            cam.Shake(0.3f, 0.4f); //Larger shake for a miss
+
             timer.SubtractTime(15f); //Penalty 15 Seconds
         }
+    }
+
+    System.Collections.IEnumerator DeResEffect()
+    {
+        float duration = 0.5f;
+        float currentTime = 0;
+        Vector3 startScale = transform.localScale;
+
+        while (currentTime < duration)
+        {
+            currentTime += Time.deltaTime;
+            //Shrink the NPC while they fade out
+            transform.localScale = Vector3.Lerp(startScale, Vector3.zero, currentTime / duration);
+            yield return null;
+        }
+
+        Destroy(gameObject);
+    }
+
+    private void MoveTowardTarget()
+    {
+        //Move the NPC toward the current target point
+        transform.position = Vector2.MoveTowards(transform.position, targetWanderPoint, moveSpeed * Time.deltaTime);
+
+        //If we reached the point, wait a bit then pick a new one
+        if (Vector2.Distance(transform.position, targetWanderPoint) < 0.2f)
+        {
+            StartCoroutine(WaitAndPickNewPoint());
+        }
+    }
+
+    System.Collections.IEnumerator WaitAndPickNewPoint()
+    {
+        isWaiting = true;
+        yield return new WaitForSeconds(Random.Range(1f, 3f));
+
+        //Get limits from your CrowdManager variables
+        CrowdManager manager = Object.FindAnyObjectByType<CrowdManager>();
+
+        //Pick a new point within the map boundaries
+        targetWanderPoint = new Vector2(
+            Random.Range(-manager.worldWidth + 1f, manager.worldWidth - 1f),
+            Random.Range(-manager.worldHeight + 1f, manager.worldHeight - 1f)
+        );
+
+        isWaiting = false;
     }
 }

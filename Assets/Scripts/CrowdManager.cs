@@ -8,37 +8,68 @@ public class CrowdManager : MonoBehaviour
     public Image wantedPosterUI;
     public Color currentTargetColor;
 
+    public int currentWave = 1;
+    public int baseCrowdSize = 20;
+    public int targetsPerWave = 1;
+    private int targetsRemaining;
+
+    public float worldWidth = 18f;
+    public float worldHeight = 10f;
+
+
     private void Start()
     {
-        SpawnCrowd();
+        SpawnWave();
     }
 
-    public void SpawnCrowd()
+    public void SpawnWave()
     {
-        Color targetColor = Color.clear;
+        //Clear old NPCs if any
+        NPC[] oldNPCs = Object.FindObjectsByType<NPC>(FindObjectsSortMode.None);
 
-        for (int i = 0; i < crowdSize; i++)
+        foreach(NPC n in oldNPCs)
         {
-            //Spawn at random position
-            Vector2 randomPos = new Vector2(Random.Range(-8f, 8f), Random.Range(-4f, 4f));
-            GameObject newNPC = Instantiate(npcPrefab, randomPos, Quaternion.identity);
-
-            NPC npcScript = newNPC.GetComponent<NPC>();
-
-            //Assign a random bright color
-            npcScript.myTrueColor = new Color(Random.value, Random.value, Random.value);
-
-            //Pick the first NPC's color as the target color
-            if (i == 0)
-            {
-                currentTargetColor = npcScript.myTrueColor;
-            }
+            Destroy(n.gameObject);
         }
 
-        //Show the target color on the UI
-        if(wantedPosterUI != null)
+        //Calculate difficulty
+        int spawnCount = baseCrowdSize + (currentWave * 10); //10 more people every wave
+        targetsRemaining = 1 + (currentWave / 3); //Extra target every 3 waves
+
+        for(int i=0; i< spawnCount; i++)
         {
-            wantedPosterUI.color = currentTargetColor;
+            Vector2 randomPos = new Vector2(Random.Range(-worldWidth, worldWidth), Random.Range(-worldHeight, worldHeight));
+            GameObject newNPC = Instantiate(npcPrefab, randomPos, Quaternion.identity);
+            NPC npcScript = newNPC.GetComponent<NPC>();
+            npcScript.myTrueColor = new Color(Random.value, Random.value, Random.value);
+
+            if (i == 0) // For now just pick the first one as Target
+            {
+                currentTargetColor = npcScript.myTrueColor;
+                wantedPosterUI.color = currentTargetColor;
+            }
+        }
+    }
+
+    public void OnTargetHit()
+    {
+        targetsRemaining--;
+        if (targetsRemaining <= 0)
+        {
+            currentWave++;
+            //Check if it's Shop Time (every 3 waves)
+            if (currentWave % 3 == 0)
+            {
+                //OpenShop()
+            }
+            else
+            {
+                SpawnWave();
+            }
+        }
+        else
+        {
+            PickNewTarget();
         }
     }
 
@@ -62,7 +93,7 @@ public class CrowdManager : MonoBehaviour
         else
         {
             //All NPCs are dead - Spawn a new Wave!
-            SpawnCrowd();
+            SpawnWave();
         }
     }
 }
