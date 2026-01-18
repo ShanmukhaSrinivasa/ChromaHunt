@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerCamera : MonoBehaviour
 {
@@ -10,6 +11,9 @@ public class PlayerCamera : MonoBehaviour
     public float mapHeight = 10f;
 
     private Camera cam;
+
+    public GameObject pingIndicator;
+    public Image screenFlashImage; 
 
     private void Start()
     {
@@ -35,6 +39,17 @@ public class PlayerCamera : MonoBehaviour
         targetPos.y = Mathf.Clamp(targetPos.y, -mapHeight, mapHeight);
 
         transform.position = targetPos;
+
+        if (isZooming)
+        {
+            Time.timeScale = 0.7f; // Slow motion
+            Time.fixedDeltaTime = 0.02f * Time.timeScale; // Smooth Physics
+        }
+        else
+        {
+            Time.timeScale = 1f; // Normal Speed
+            Time.fixedDeltaTime = 0.02f;
+        }
     } 
 
     public void Shake(float intensity, float duration)
@@ -54,6 +69,64 @@ public class PlayerCamera : MonoBehaviour
 
             transform.position = new Vector3(originalPos.x + x, originalPos.y + y, -10f);
             elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    public void ShowPingRipple(Vector2 direction)
+    {
+        StartCoroutine(ProcessPing(direction));
+    }
+
+    private System.Collections.IEnumerator ProcessPing(Vector2 direction)
+    {
+        pingIndicator.SetActive(true);
+        CanvasGroup cg = pingIndicator.GetComponent<CanvasGroup>();
+
+        cg.alpha = 1;
+
+
+        // Roatate the ping indicator to point toawrds the target
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        pingIndicator.transform.rotation = Quaternion.Euler(0, 0, angle - 90);
+
+        // Set a very small starting scale for the ripple effect
+        pingIndicator.transform.localScale = new Vector3(0.3f, 0.3f, 1f);
+
+        // Fade out after 1.5 seconds
+        float duration = 0.8f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = elapsed / duration;
+
+            // 1. Make the ripple expand outward quickly
+            float curve = 1f - Mathf.Pow(1f - t, 3); // Ease out cubic
+            pingIndicator.transform.localScale = Vector3.Lerp(new Vector3(0.5f, 0.5f, 1f), new Vector3(3f, 3f, 1f), curve);
+
+            cg.alpha = 1f - curve;
+            yield return null;
+        }
+
+        pingIndicator.SetActive(false);
+    }
+
+    public void FlashRed()
+    {
+        StartCoroutine(RedFlashRoutine());
+    }
+
+    private System.Collections.IEnumerator RedFlashRoutine()
+    {
+        float elapsed = 0f;
+        float duration = 0.25f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float alpha = Mathf.Lerp(0.4f, 0f, elapsed / duration);
+            screenFlashImage.color = new Color(1, 0, 0, alpha);
             yield return null;
         }
     }

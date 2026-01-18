@@ -6,6 +6,8 @@ public class GameTimer : MonoBehaviour
     public float timeRemaining = 60f;
     public bool isGameActive = true;
     public TextMeshProUGUI timerText;
+    public int score = 0;
+    public TextMeshProUGUI scoreText;
 
     private void Update()
     {
@@ -13,15 +15,12 @@ public class GameTimer : MonoBehaviour
         {
             if (timeRemaining > 0)
             {
-                timeRemaining -= Time.deltaTime;
+                timeRemaining -= Time.unscaledDeltaTime;
                 DisplayTime(timeRemaining);
             }
             else
             {
-                Debug.Log("Time is up!");
-                timeRemaining = 0;
-                isGameActive = false;
-                //Trigger Game Over UI here later
+                EndGame();
             }
         }
     }
@@ -34,11 +33,29 @@ public class GameTimer : MonoBehaviour
 
     public void AddTime(float amount)
     {
+        if (!isGameActive || timeRemaining <= 0)
+        {
+            return;
+        }
         timeRemaining += amount;
     }
 
     public void SubtractTime(float amount)
     {
         timeRemaining -= amount;
+    }
+
+    public void AddScore(int points)
+    {
+        score += points;
+        scoreText.text = "Bounties: " + score;
+    }
+
+    private void EndGame()
+    {
+        Debug.Log("Time is up!");
+        timeRemaining = 0;
+        isGameActive = false;
+        DisplayTime(0);
     }
 }

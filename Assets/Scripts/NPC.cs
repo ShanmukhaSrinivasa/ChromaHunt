@@ -92,15 +92,19 @@ public class NPC : MonoBehaviour
 
             StartCoroutine(DeResEffect());
 
-            timer.AddTime(10f); //Reward 10 Seconds
+            timer.AddTime(20f); //Reward 20 Seconds
 
             manager.OnTargetHit();
+
+            timer.AddScore(1);
         }
         else
         {
             Debug.Log("Civilian Hit ~ Penalty!");
 
             cam.Shake(0.3f, 0.4f); //Larger shake for a miss
+
+            cam.FlashRed();
 
             timer.SubtractTime(15f); //Penalty 15 Seconds
         }
