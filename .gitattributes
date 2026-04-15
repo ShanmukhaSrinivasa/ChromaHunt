@@ -1,2 +1,13 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Exclude Unity shader files from language stats
+*.shader linguist-vendored
+*.cginc linguist-vendored
+*.compute linguist-vendored
+
+# Exclude standard Unity generated files
+*.mat linguist-generated
+*.prefab linguist-generated
+*.asset linguist-generated
+*.unity linguist-generated
+
+# (Optional) If you have a Plugins folder with third-party code, ignore it too
+Assets/Plugins/** linguist-vendored
